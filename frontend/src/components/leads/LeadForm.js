@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { ArrowLeft, Save, User, Mail, Phone, Building, MapPin, Target, TrendingUp, DollarSign, Calendar, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Save, User, Mail, Building, Target, TrendingUp, CheckCircle, Phone, MapPin, DollarSign, Calendar } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const LeadForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -32,13 +30,7 @@ const LeadForm = () => {
   const isEditing = Boolean(id);
 
   // Load lead data if editing
-  useEffect(() => {
-    if (isEditing) {
-      loadLead();
-    }
-  }, [id]);
-
-  const loadLead = async () => {
+  const loadLead = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/leads/${id}`);
@@ -67,7 +59,13 @@ const LeadForm = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    if (isEditing) {
+      loadLead();
+    }
+  }, [isEditing, loadLead]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -99,7 +97,7 @@ const LeadForm = () => {
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = 'Please enter a valid email address';
     }
 
     if (!formData.source) {
@@ -152,8 +150,11 @@ const LeadForm = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="loading-spinner mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading lead information...</p>
+        </div>
       </div>
     );
   }
@@ -167,11 +168,12 @@ const LeadForm = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="btn-secondary"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </button>
+              <div className="h-6 w-px bg-gray-300"></div>
               <h1 className="text-2xl font-bold text-gray-900">
                 {isEditing ? 'Edit Lead' : 'Create New Lead'}
               </h1>
@@ -181,325 +183,333 @@ const LeadForm = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Personal Information */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <User className="h-5 w-5 mr-2" />
-                Personal Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="first_name"
-                    name="first_name"
-                    value={formData.first_name}
-                    onChange={handleChange}
-                    className={`w-full border rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      errors.first_name ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter first name"
-                  />
-                  {errors.first_name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
-                  )}
+      <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="card">
+          <div className="card-body">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Personal Information */}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <User className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">Personal Information</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="first_name" className="form-label">
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="first_name"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleChange}
+                      className={`form-input ${errors.first_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      placeholder="Enter first name"
+                    />
+                    {errors.first_name && (
+                      <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="last_name" className="form-label">
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="last_name"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleChange}
+                      className={`form-input ${errors.last_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      placeholder="Enter last name"
+                    />
+                    {errors.last_name && (
+                      <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="last_name"
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleChange}
-                    className={`w-full border rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      errors.last_name ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter last name"
-                  />
-                  {errors.last_name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="email" className="form-label">
+                      Email Address *
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className={`form-input pl-10 ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    {errors.email && (
+                      <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                    )}
+                  </div>
 
-            {/* Contact Information */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <Mail className="h-5 w-5 mr-2" />
-                Contact Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full border rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      errors.email ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter email address"
-                  />
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter phone number"
-                  />
+                  <div>
+                    <label htmlFor="phone" className="form-label">
+                      Phone Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="form-input pl-10"
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Company Information */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <Building className="h-5 w-5 mr-2" />
-                Company Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
-                    Company
-                  </label>
-                  <input
-                    type="text"
-                    id="company"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter company name"
-                  />
+              {/* Company Information */}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Building className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">Company Information</h3>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-1">
+                    <label htmlFor="company" className="form-label">
+                      Company
+                    </label>
+                    <input
+                      type="text"
+                      id="company"
+                      name="company"
+                      value={formData.company}
+                      onChange={handleChange}
+                      className="form-input"
+                      placeholder="Enter company name"
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter city"
-                  />
-                </div>
+                  <div>
+                    <label htmlFor="city" className="form-label">
+                      City
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        id="city"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleChange}
+                        className="form-input pl-10"
+                        placeholder="Enter city"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                    State
-                  </label>
-                  <input
-                    type="text"
-                    id="state"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter state"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Lead Details */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <Target className="h-5 w-5 mr-2" />
-                Lead Details
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="source" className="block text-sm font-medium text-gray-700 mb-1">
-                    Source *
-                  </label>
-                  <select
-                    id="source"
-                    name="source"
-                    value={formData.source}
-                    onChange={handleChange}
-                    className={`w-full border rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      errors.source ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="">Select source</option>
-                    <option value="website">Website</option>
-                    <option value="facebook_ads">Facebook Ads</option>
-                    <option value="google_ads">Google Ads</option>
-                    <option value="referral">Referral</option>
-                    <option value="events">Events</option>
-                    <option value="other">Other</option>
-                  </select>
-                  {errors.source && (
-                    <p className="mt-1 text-sm text-red-600">{errors.source}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                    Status *
-                  </label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className={`w-full border rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      errors.status ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="qualified">Qualified</option>
-                    <option value="won">Won</option>
-                    <option value="lost">Lost</option>
-                  </select>
-                  {errors.status && (
-                    <p className="mt-1 text-sm text-red-600">{errors.status}</p>
-                  )}
+                  <div>
+                    <label htmlFor="state" className="form-label">
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      id="state"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      className="form-input"
+                      placeholder="Enter state"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Scoring and Value */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Scoring and Value
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="score" className="block text-sm font-medium text-gray-700 mb-1">
-                    Score (0-100) *
-                  </label>
-                  <input
-                    type="number"
-                    id="score"
-                    name="score"
-                    min="0"
-                    max="100"
-                    value={formData.score}
-                    onChange={handleChange}
-                    className={`w-full border rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      errors.score ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.score && (
-                    <p className="mt-1 text-sm text-red-600">{errors.score}</p>
-                  )}
+              {/* Lead Details */}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Target className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">Lead Details</h3>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="source" className="form-label">
+                      Source *
+                    </label>
+                    <select
+                      id="source"
+                      name="source"
+                      value={formData.source}
+                      onChange={handleChange}
+                      className={`form-select ${errors.source ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                    >
+                      <option value="">Select source</option>
+                      <option value="website">Website</option>
+                      <option value="facebook_ads">Facebook Ads</option>
+                      <option value="google_ads">Google Ads</option>
+                      <option value="referral">Referral</option>
+                      <option value="events">Events</option>
+                      <option value="other">Other</option>
+                    </select>
+                    {errors.source && (
+                      <p className="mt-1 text-sm text-red-600">{errors.source}</p>
+                    )}
+                  </div>
 
-                <div>
-                  <label htmlFor="lead_value" className="block text-sm font-medium text-gray-700 mb-1">
-                    Lead Value ($)
-                  </label>
-                  <input
-                    type="number"
-                    id="lead_value"
-                    name="lead_value"
-                    min="0"
-                    step="0.01"
-                    value={formData.lead_value}
-                    onChange={handleChange}
-                    className={`w-full border rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      errors.lead_value ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.lead_value && (
-                    <p className="mt-1 text-sm text-red-600">{errors.lead_value}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="last_activity_at" className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Activity
-                  </label>
-                  <input
-                    type="date"
-                    id="last_activity_at"
-                    name="last_activity_at"
-                    value={formData.last_activity_at}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                  />
+                  <div>
+                    <label htmlFor="status" className="form-label">
+                      Status *
+                    </label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className={`form-select ${errors.status ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                    >
+                      <option value="new">New</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="won">Won</option>
+                      <option value="lost">Lost</option>
+                    </select>
+                    {errors.status && (
+                      <p className="mt-1 text-sm text-red-600">{errors.status}</p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Qualification */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Qualification
-              </h3>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="is_qualified"
-                  name="is_qualified"
-                  checked={formData.is_qualified}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                />
-                <label htmlFor="is_qualified" className="ml-2 block text-sm text-gray-900">
-                  Mark as qualified lead
-                </label>
+              {/* Scoring and Value */}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">Scoring and Value</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label htmlFor="score" className="form-label">
+                      Score (0-100) *
+                    </label>
+                    <input
+                      type="number"
+                      id="score"
+                      name="score"
+                      value={formData.score}
+                      onChange={handleChange}
+                      className={`form-input ${errors.score ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      min="0"
+                      max="100"
+                    />
+                    {errors.score && (
+                      <p className="mt-1 text-sm text-red-600">{errors.score}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="lead_value" className="form-label">
+                      Lead Value ($)
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="number"
+                        id="lead_value"
+                        name="lead_value"
+                        value={formData.lead_value}
+                        onChange={handleChange}
+                        className="form-input pl-10"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="last_activity_at" className="form-label">
+                      Last Activity
+                    </label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="date"
+                        id="last_activity_at"
+                        name="last_activity_at"
+                        value={formData.last_activity_at}
+                        onChange={handleChange}
+                        className="form-input pl-10"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                {saving ? 'Saving...' : (isEditing ? 'Update Lead' : 'Create Lead')}
-              </button>
-            </div>
-          </form>
+              {/* Qualification */}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">Qualification</h3>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="is_qualified"
+                    name="is_qualified"
+                    checked={formData.is_qualified}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="is_qualified" className="text-sm font-medium text-gray-700">
+                    Mark as qualified lead
+                  </label>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-primary"
+                >
+                  {saving ? (
+                    <div className="loading-spinner mr-2"></div>
+                  ) : (
+                    <Save className="w-5 h-5 mr-2" />
+                  )}
+                  {saving ? 'Saving...' : (isEditing ? 'Update Lead' : 'Create Lead')}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </main>
     </div>

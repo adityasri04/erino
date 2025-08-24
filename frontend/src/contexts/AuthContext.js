@@ -60,11 +60,35 @@ export const AuthProvider = ({ children }) => {
       
       if (response.data.success) {
         setUser(response.data.data.user);
-        toast.success('Registration successful!');
+        toast.success('Registration successful! Welcome to Erino!');
         return { success: true };
+      } else {
+        const errorMessage = response.data.error || 'Registration failed';
+        toast.error(errorMessage);
+        return { success: false, error: errorMessage };
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Registration failed';
+      let errorMessage = 'Registration failed';
+      
+      if (error.response) {
+        // Server responded with error
+        if (error.response.status === 409) {
+          errorMessage = 'An account with this email already exists';
+        } else if (error.response.status === 400) {
+          errorMessage = error.response.data.error || 'Please check your input and try again';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Server error. Please try again later';
+        } else {
+          errorMessage = error.response.data.error || 'Registration failed';
+        }
+      } else if (error.request) {
+        // Network error
+        errorMessage = 'Network error. Please check your connection and try again';
+      } else {
+        // Other error
+        errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     }
