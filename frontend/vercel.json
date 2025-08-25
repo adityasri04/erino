@@ -28,6 +28,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://bsluwtisbrxnshnxplvw.supabase.co/functions/v1/api"
+    "REACT_APP_API_URL": "https://erino-10bpdk884-adityasri04s-projects.vercel.app"
   }
 }

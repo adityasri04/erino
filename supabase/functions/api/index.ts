@@ -1,14 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://frontend-q6kto3ksm-adityasri04s-projects.vercel.app',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Credentials': 'true'
-}
+// Supabase Edge Function configuration
+Deno.serve(async (req) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
+  }
 
-serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -19,11 +19,33 @@ serve(async (req) => {
     const path = url.pathname
     const method = req.method
 
+    console.log(`Request: ${method} ${path}`)
+
     // Health check
     if (path === '/health' && method === 'GET') {
       return new Response(
-        JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
+        JSON.stringify({ 
+          status: 'ok', 
+          timestamp: new Date().toISOString(),
+          message: 'API is working!'
+        }),
         { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Test endpoint
+    if (path === '/test' && method === 'GET') {
+      return new Response(
+        JSON.stringify({ 
+          message: 'Edge Function is working!',
+          timestamp: new Date().toISOString(),
+          path: path,
+          method: method
+        }),
+        { 
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
@@ -49,7 +71,12 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: 'Not Found' }),
+      JSON.stringify({ 
+        error: 'Not Found',
+        path: path,
+        method: method,
+        message: 'Try /test or /health endpoints'
+      }),
       { 
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -59,7 +86,11 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal Server Error' }),
+      JSON.stringify({ 
+        error: 'Internal Server Error',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -69,10 +100,12 @@ serve(async (req) => {
 })
 
 async function handleAuthRoutes(path: string, method: string, req: Request) {
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-  )
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
+  }
 
   if (path === '/auth/register' && method === 'POST') {
     try {
@@ -90,43 +123,14 @@ async function handleAuthRoutes(path: string, method: string, req: Request) {
         )
       }
 
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .single()
-
-      if (existingUser) {
-        return new Response(
-          JSON.stringify({ success: false, message: 'User already exists' }),
-          { 
-            status: 409,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
-      }
-
-      // Hash password (in production, use proper hashing)
-      const hashedPassword = btoa(password) // Simple encoding for demo
-
-      // Insert user
-      const { data: user, error } = await supabase
-        .from('users')
-        .insert([{ first_name, last_name, email, password_hash: hashedPassword }])
-        .select('id, first_name, last_name, email, created_at')
-        .single()
-
-      if (error) throw error
-
-      // Generate JWT token
+      // For demo purposes, return success without database
+      const user = { id: 1, first_name, last_name, email, created_at: new Date().toISOString() }
       const token = btoa(JSON.stringify({ userId: user.id, email: user.email }))
 
-      // Set cookie
       const response = new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'User registered successfully',
+          message: 'User registered successfully (demo mode)',
           user: { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email }
         }),
         { 
@@ -165,42 +169,14 @@ async function handleAuthRoutes(path: string, method: string, req: Request) {
         )
       }
 
-      // Find user
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email, password_hash')
-        .eq('email', email)
-        .single()
-
-      if (error || !user) {
-        return new Response(
-          JSON.stringify({ success: false, message: 'Invalid credentials' }),
-          { 
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
-      }
-
-      // Check password (in production, use proper comparison)
-      if (btoa(password) !== user.password_hash) {
-        return new Response(
-          JSON.stringify({ success: false, message: 'Invalid credentials' }),
-          { 
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
-      }
-
-      // Generate JWT token
+      // Demo login - accept any email/password
+      const user = { id: 1, first_name: 'Demo', last_name: 'User', email: email }
       const token = btoa(JSON.stringify({ userId: user.id, email: user.email }))
 
-      // Set cookie
       const response = new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Login successful',
+          message: 'Login successful (demo mode)',
           user: { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email }
         }),
         { 
@@ -251,25 +227,8 @@ async function handleAuthRoutes(path: string, method: string, req: Request) {
         )
       }
 
-      // Decode token (in production, use proper JWT verification)
-      const decoded = JSON.parse(atob(token))
-      
-      // Get user data
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email, created_at')
-        .eq('id', decoded.userId)
-        .single()
-
-      if (error || !user) {
-        return new Response(
-          JSON.stringify({ success: false, message: 'User not found' }),
-          { 
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
-      }
+      // Demo user data
+      const user = { id: 1, first_name: 'Demo', last_name: 'User', email: 'demo@example.com', created_at: new Date().toISOString() }
 
       return new Response(
         JSON.stringify({ 
@@ -304,6 +263,13 @@ async function handleAuthRoutes(path: string, method: string, req: Request) {
 }
 
 async function handleLeadsRoute(method: string, req: Request) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
+  }
+
   if (method === 'GET') {
     try {
       const url = new URL(req.url)
@@ -311,33 +277,37 @@ async function handleLeadsRoute(method: string, req: Request) {
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100)
       const offset = (page - 1) * limit
 
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-      )
+      // Demo leads data
+      const demoLeads = Array.from({ length: 25 }, (_, i) => ({
+        id: i + 1,
+        user_id: 1,
+        first_name: `Demo${i + 1}`,
+        last_name: 'Lead',
+        email: `demo${i + 1}@example.com`,
+        phone: `+1-555-${String(i + 1000).padStart(4, '0')}`,
+        company: `Company ${i + 1}`,
+        city: `City ${i + 1}`,
+        state: `State ${i + 1}`,
+        source: ['website', 'facebook_ads', 'google_ads', 'referral', 'events'][i % 5],
+        status: ['new', 'contacted', 'qualified', 'lost', 'won'][i % 5],
+        score: Math.floor(Math.random() * 100) + 1,
+        lead_value: Math.floor(Math.random() * 10000) + 1000,
+        is_qualified: i % 3 === 0,
+        created_at: new Date(Date.now() - i * 86400000).toISOString(),
+        updated_at: new Date(Date.now() - i * 86400000).toISOString()
+      }))
 
-      // Get total count
-      const { count } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-
-      // Get leads with pagination
-      const { data: leads, error } = await supabase
-        .from('leads')
-        .select('*')
-        .range(offset, offset + limit - 1)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
+      const total = demoLeads.length
+      const paginatedLeads = demoLeads.slice(offset, offset + limit)
 
       return new Response(
         JSON.stringify({
           success: true,
-          data: leads,
+          data: paginatedLeads,
           page,
           limit,
-          total: count || 0,
-          totalPages: Math.ceil((count || 0) / limit)
+          total,
+          totalPages: Math.ceil(total / limit)
         }),
         { 
           status: 200,
@@ -373,39 +343,31 @@ async function handleLeadsRoute(method: string, req: Request) {
         )
       }
 
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-      )
-
-      // Insert lead
-      const { data: lead, error } = await supabase
-        .from('leads')
-        .insert([{
-          user_id: 1, // Default user for demo
-          first_name,
-          last_name,
-          email,
-          phone,
-          company,
-          city,
-          state,
-          source,
-          status: status || 'new',
-          score: score || 0,
-          lead_value: lead_value || 0,
-          is_qualified: false
-        }])
-        .select()
-        .single()
-
-      if (error) throw error
+      // Demo lead creation
+      const newLead = {
+        id: Math.floor(Math.random() * 10000) + 100,
+        user_id: 1,
+        first_name,
+        last_name,
+        email,
+        phone: phone || '',
+        company: company || '',
+        city: city || '',
+        state: state || '',
+        source: source || 'website',
+        status: status || 'new',
+        score: score || 50,
+        lead_value: lead_value || 0,
+        is_qualified: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
 
       return new Response(
         JSON.stringify({
           success: true,
-          message: 'Lead created successfully',
-          data: lead
+          message: 'Lead created successfully (demo mode)',
+          data: newLead
         }),
         { 
           status: 201,
@@ -435,6 +397,13 @@ async function handleLeadsRoute(method: string, req: Request) {
 }
 
 async function handleLeadRoutes(path: string, method: string, req: Request) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
+  }
+
   const leadId = path.split('/')[1]
   
   if (!leadId || isNaN(parseInt(leadId))) {
@@ -447,27 +416,26 @@ async function handleLeadRoutes(path: string, method: string, req: Request) {
     )
   }
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-  )
-
   if (method === 'GET') {
     try {
-      const { data: lead, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('id', leadId)
-        .single()
-
-      if (error || !lead) {
-        return new Response(
-          JSON.stringify({ success: false, message: 'Lead not found' }),
-          { 
-            status: 404,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
+      // Demo lead data
+      const lead = {
+        id: parseInt(leadId),
+        user_id: 1,
+        first_name: `Demo${leadId}`,
+        last_name: 'Lead',
+        email: `demo${leadId}@example.com`,
+        phone: `+1-555-${String(parseInt(leadId) + 1000).padStart(4, '0')}`,
+        company: `Company ${leadId}`,
+        city: `City ${leadId}`,
+        state: `State ${leadId}`,
+        source: 'website',
+        status: 'new',
+        score: 50,
+        lead_value: 5000,
+        is_qualified: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
 
       return new Response(
@@ -506,33 +474,31 @@ async function handleLeadRoutes(path: string, method: string, req: Request) {
         )
       }
 
-      const { data: lead, error } = await supabase
-        .from('leads')
-        .update({
-          first_name,
-          last_name,
-          email,
-          phone,
-          company,
-          city,
-          state,
-          source,
-          status,
-          score,
-          lead_value,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', leadId)
-        .select()
-        .single()
-
-      if (error) throw error
+      // Demo lead update
+      const updatedLead = {
+        id: parseInt(leadId),
+        user_id: 1,
+        first_name,
+        last_name,
+        email,
+        phone: phone || '',
+        company: company || '',
+        city: city || '',
+        state: state || '',
+        source: source || 'website',
+        status: status || 'new',
+        score: score || 50,
+        lead_value: lead_value || 0,
+        is_qualified: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
 
       return new Response(
         JSON.stringify({
           success: true,
-          message: 'Lead updated successfully',
-          data: lead
+          message: 'Lead updated successfully (demo mode)',
+          data: updatedLead
         }),
         { 
           status: 200,
@@ -554,17 +520,10 @@ async function handleLeadRoutes(path: string, method: string, req: Request) {
 
   if (method === 'DELETE') {
     try {
-      const { error } = await supabase
-        .from('leads')
-        .delete()
-        .eq('id', leadId)
-
-      if (error) throw error
-
       return new Response(
         JSON.stringify({
           success: true,
-          message: 'Lead deleted successfully'
+          message: 'Lead deleted successfully (demo mode)'
         }),
         { 
           status: 200,
