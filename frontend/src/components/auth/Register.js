@@ -127,7 +127,7 @@ const Register = () => {
     console.log('=== INSPECTING CURRENT STATE ===');
     console.log('Current formData state:', formData);
     console.log('Current errors state:', errors);
-    console.log('Form data reference:', formData === formData);
+    console.log('Form data reference:', formData);
     console.log('Form data keys:', Object.keys(formData));
     console.log('Form data values:', Object.values(formData));
     

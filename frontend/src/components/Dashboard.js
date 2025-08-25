@@ -5,7 +5,6 @@ import { AgGridReact } from 'ag-grid-react';
 import { 
   Plus, 
   Search, 
-  Filter, 
   LogOut, 
   User, 
   Building, 
@@ -19,6 +18,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import API_BASE_URL from '../config/api';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
@@ -47,7 +47,7 @@ const Dashboard = () => {
       if (filters.score_min) params.append('score_min', filters.score_min);
       if (filters.score_max) params.append('score_max', filters.score_max);
 
-      const response = await axios.get(`/api/leads?${params.toString()}`);
+      const response = await axios.get(`${API_BASE_URL}/leads?${params.toString()}`);
       if (response.data.success) {
         setLeads(response.data.data);
       }
@@ -88,7 +88,7 @@ const Dashboard = () => {
   const handleDelete = useCallback(async (leadId) => {
     if (window.confirm('Are you sure you want to delete this lead?')) {
       try {
-        const response = await axios.delete(`/api/leads/${leadId}`);
+        const response = await axios.delete(`${API_BASE_URL}/leads/${leadId}`);
         if (response.data.success) {
           toast.success('Lead deleted successfully');
           fetchLeads();

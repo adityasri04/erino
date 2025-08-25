@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, User, Mail, Building, Target, TrendingUp, CheckCircle, Phone, MapPin, DollarSign, Calendar } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import API_BASE_URL from '../../config/api';
 
 const LeadForm = () => {
   const { id } = useParams();
@@ -33,7 +34,7 @@ const LeadForm = () => {
   const loadLead = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/leads/${id}`);
+      const response = await axios.get(`${API_BASE_URL}/leads/${id}`);
       if (response.data.success) {
         const lead = response.data.data.lead;
         setFormData({
@@ -130,9 +131,9 @@ const LeadForm = () => {
     try {
       let response;
       if (isEditing) {
-        response = await axios.put(`/api/leads/${id}`, formData);
+        response = await axios.put(`${API_BASE_URL}/leads/${id}`, formData);
       } else {
-        response = await axios.post('/api/leads', formData);
+                  response = await axios.post(`${API_BASE_URL}/leads`, formData);
       }
 
       if (response.data.success) {

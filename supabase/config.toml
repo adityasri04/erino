@@ -13,16 +13,6 @@ port = 54322
 shadow_port = 54320
 major_version = 15
 
-[db.pooler]
-enabled = false
-port = 54329
-pooler_mode = "transaction"
-default_pool_size = 15
-
-[realtime]
-enabled = true
-port = 54323
-
 [studio]
 enabled = true
 port = 54323
@@ -34,14 +24,8 @@ port = 54324
 smtp_port = 54325
 pop3_port = 54326
 
-[storage]
-enabled = true
-port = 54325
-file_size_limit = "50MiB"
-
 [auth]
 enabled = true
-port = 54324
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
@@ -55,7 +39,3 @@ enable_confirmations = false
 [auth.sms]
 enable_signup = true
 enable_confirmations = false
-
-[edge_functions]
-enabled = true
-port = 54321
